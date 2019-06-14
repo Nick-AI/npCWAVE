@@ -38,11 +38,28 @@ class DCWAVELoader:
 
     @staticmethod
     def _relu(x):
+        """Relu activation function for NN
+
+        Args:
+            x: data matrix
+
+        Returns:
+            relu(x)
+        """
         np.maximum(x, 0, x)
         return x
 
     @staticmethod
     def _il(x):
+        """Approaches 0 for x-> -inf as 1/(1-x), with f(0)=1 and f'(0)=1. Cont differentiable.
+        Uses TF workaround from: https://github.com/tensorflow/tensorflow/issues/2540
+
+        Args:
+            x: data matrix
+
+        Returns:
+            relu(x)
+        """
         if x < 0:
             return 1 / (1 - x)
         else:
@@ -50,6 +67,15 @@ class DCWAVELoader:
 
     @staticmethod
     def _standardize(data, params):
+        """Standardizes data matrix to mean=0, std=1
+
+        Args:
+            data: data matrix
+            params: dict with pre-calculate mu and sig values for data
+
+        Returns:
+            data-mean/std
+        """
         m = params['mu']
         s = params['sig']
         return (data - m) / s
@@ -102,6 +128,14 @@ class DCWAVELoader:
         return [in_angle, ang_type]
 
     def _proc_data(self, data_mat):
+        """Preprocessing step. Applies appropriate normalization techniques based on column index.
+
+        Args:
+            data_mat: data matrix
+
+        Returns:
+            preprocessed data matrix
+        """
         data = np.array(data_mat, dtype='float32')
         for idx, col in enumerate(data.T):
             if idx == 0:  # time of day SAR
@@ -127,6 +161,9 @@ class DCWAVELoader:
         return form_data.T
 
     def _load_params(self):
+        """Loads neural network weights and biases from pickle file
+
+        """
         with open(self.MDL_PARAMS, 'rb') as handle:
             params = pickle.load(handle)
             for key in list(params.keys()):
@@ -138,6 +175,17 @@ class DCWAVELoader:
                 self.NUM_LAYERS += 1
 
     def _layer_output(self, inp, weights, biases, is_out=False):
+        """Calculates output for standard dense feed-forward layer.
+
+        Args:
+            inp: input data
+            weights: layer weights
+            biases: layer biases
+            is_out: boolean, changes activation function if true
+
+        Returns:
+            model output
+        """
         if is_out:
             out = np.dot(inp, weights) + biases
         else:
@@ -146,6 +194,14 @@ class DCWAVELoader:
         return out
 
     def _final_output(self, inp):
+        """Transforms linear output from network to parameterize heteroskedastic Gaussian distribution
+
+        Args:
+            inp: model output
+
+        Returns:
+            transformed model output
+        """
         mu_out = inp[:, 0]
         sig_out = inp[:, 1]
         sig_out = np.array(list(map(self._il, sig_out)), dtype='float32')
@@ -153,6 +209,14 @@ class DCWAVELoader:
         return out
 
     def predict(self, x):
+        """Driver function, preprocesses raw input and returns model predictions
+
+        Args:
+            x: data matrix, has to be of shape (n,27)
+
+        Returns:
+            model outputs of shape (n,2) with first output dimension being mean and second being std for Gaussian
+        """
         x = self._proc_data(x)
         for l_idx in range(self.NUM_LAYERS):
             # intermediate hidden layers
@@ -163,7 +227,9 @@ class DCWAVELoader:
                 x = self._layer_output(x, self.WEIGHTS[l_idx], self.BIASES[l_idx], True)
         return self._final_output(x)
 
+
 if __name__ =='__main__':
+    #If ran as standalone script
     parser = argparse.ArgumentParser(description='DeepCWAVE model')
 
     parser.add_argument('input', nargs='+', type=float,
@@ -185,6 +251,7 @@ if __name__ =='__main__':
     print(mdl.predict(inp))
 
 else:
+    # if imported as module
     mdl = DCWAVELoader()
 
     def predict_row(x, weight_file=None):
