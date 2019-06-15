@@ -253,12 +253,11 @@ if __name__ =='__main__':
 else:
     # if imported as module
     mdl = DCWAVELoader()
-
     def predict(x, weight_file=None):
         if not isinstance(x, np.ndarray):
             x = np.array(x, dtype='float32')
         if np.ndim(x)<2:
-            x = np.array(x, dtype='float32').reshape(1,27)
+            x = x.reshape(1,27)
         assert x.shape[1] == 27
 
         if weight_file:
