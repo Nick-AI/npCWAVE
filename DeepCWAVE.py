@@ -254,19 +254,13 @@ else:
     # if imported as module
     mdl = DCWAVELoader()
 
-    def predict_row(x, weight_file=None):
-        assert len(x) == 27
-        x = np.array(x, dtype='float32').reshape(1,27)
-        if weight_file:
-            tmp_mdl = DCWAVELoader(weight_file=weight_file)
-            preds = tmp_mdl.predict(x)
-        else:
-            preds = mdl.predict(x)
-        return preds
-
-    def predict_mat(x, weight_file=None):
-        x = np.array(x, dtype='float32')
+    def predict(x, weight_file=None):
+        if not isinstance(x, type(np.ndarray)):
+            x = np.array(x, dtype='float32')
+        if np.ndim(x)<2:
+            x = np.array(x, dtype='float32').reshape(1,27)
         assert x.shape[1] == 27
+
         if weight_file:
             tmp_mdl = DCWAVELoader(weight_file=weight_file)
             preds = tmp_mdl.predict(x)
